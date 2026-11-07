@@ -44,8 +44,7 @@ CITIES = [
 # Bounding boxes: west, south, east, north
 FIRE_BOX = (69.0, 27.0, 78.0, 34.0)
 
-STATION_BOX = (69.5, 27.5, 75.8, 34.2)
-
+STATION_BOX = (69.5, 27.5, 75.0, 34.2)
 # API endpoints
 OPEN_METEO_AQ = "https://air-quality-api.open-meteo.com/v1/air-quality"
 
