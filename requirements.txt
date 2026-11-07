@@ -1,0 +1,10 @@
+requests
+pandas
+numpy
+pyarrow
+xgboost
+scikit-learn
+joblib
+python-dotenv
+matplotlib
+jupyterlab
