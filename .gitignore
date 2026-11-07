@@ -1,5 +1,6 @@
 .env
 .venv/
 __pycache__/
-data_raw/
+data_raw/*
+!data_raw/pakistan_adm1.geojson
 *.ipynb_checkpoints/
