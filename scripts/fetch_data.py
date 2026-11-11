@@ -10,6 +10,7 @@ from openmeteo import get_model_table
 from openaq import find_stations, latest_pm25
 from firms import get_fires
 from aqi import pm25_to_aqi, category
+from smog import fire_counts, smog_score
 
 
 # Output folder: docs/data/
@@ -137,6 +138,12 @@ def main():
         # OpenAQ failure should not stop the website pipeline
         print("OpenAQ skipped:", e)
 
+    # Download FIRMS data BEFORE the city loop.
+    # This allows every city to calculate its nearby and upwind fires.
+    print("\nDownloading NASA FIRMS fire detections...")
+
+    fires = get_fires(days=2)
+
     latest = []
     history = {}
 
@@ -178,6 +185,24 @@ def main():
         aqi = pm25_to_aqi(pm25)
         cat, color = category(aqi)
 
+        # Calculate nearby and upwind fire counts
+        n150, n_up = fire_counts(
+            lat,
+            lon,
+            cur.wind_dir,
+            fires
+        )
+
+        # Calculate city smog risk score
+        score, level, reasons = smog_score(
+            pm25,
+            cur.wind_ms,
+            cur.blh,
+            cur.visibility,
+            cur.humidity,
+            n_up
+        )
+
         # Yesterday's AQI, based on modelled data
         yesterday = current_time - pd.Timedelta(days=1)
 
@@ -208,7 +233,14 @@ def main():
             "wind_dir": cur["wind_dir"],
             "visibility": cur["visibility"],
             "blh": cur["blh"],
-            "yesterday_aqi": y_aqi
+            "yesterday_aqi": y_aqi,
+
+            # Phase 7: Smog risk information
+            "smog_score": score,
+            "smog_level": level,
+            "smog_reasons": reasons,
+            "fires_150km": n150,
+            "fires_upwind": n_up
         }
 
         latest.append({
@@ -247,10 +279,6 @@ def main():
             ]
         }
 
-    print("\nDownloading NASA FIRMS fire detections...")
-
-    fires = get_fires(days=2)
-
     # Limit output to 5000 detections
     fire_list = [
         {
@@ -259,6 +287,23 @@ def main():
         }
         for row in fires.head(5000).round(4).to_dict(orient="records")
     ]
+
+    # Phase 8: Save hourly data for future retraining
+    arch = BASE_DIR / "data_archive"
+    arch.mkdir(parents=True, exist_ok=True)
+
+    # Save today's available hourly records.
+    # The daily file is refreshed as new hourly data arrives.
+    snap = t[
+        (t["time"] >= now.normalize()) &
+        (t["time"] <= now)
+    ].copy()
+
+    for day, g in snap.groupby(snap["time"].dt.date):
+        g.to_csv(arch / f"{day}.csv", index=False)
+
+    print("Archive records saved:", len(snap))
+
 
     # Timestamp for all output files
     stamp = pd.Timestamp.now(tz=TIMEZONE).strftime(

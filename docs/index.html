@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmogWatch Punjab: live air quality and smog</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">SmogWatch <span>Punjab</span></div>
+  <select id="citySelect" aria-label="Choose a city"></select>
+  <div class="updated" id="updated">Loading...</div>
+</header>
+
+<main class="grid">
+  <section class="card hero" id="hero"></section>
+
+  <section class="card mapcard">
+    <div class="maptools">
+      <label><input type="checkbox" id="tFires" checked> Fires</label>
+      <label><input type="checkbox" id="tWind" checked> Wind</label>
+      <span class="muted">Circle colour = AQI</span>
+    </div>
+    <div id="map"></div>
+  </section>
+
+  <section class="card weather" id="weather"></section>
+
+  <section class="card ranking"><h2>City ranking (AQI)</h2><ol id="rankList"></ol></section>
+
+  <section class="card smog"><h2>Smog watch</h2><div id="smogBody"></div></section>
+
+  <section class="card advice" id="advice"></section>
+
+  <section class="card half"><h2>PM2.5: last 48 h and next 72 h</h2><div id="trend" class="chart"></div></section>
+
+  <section class="card half"><h2>Last 7 days, hour by hour (AQI)</h2><div id="heat" class="chart"></div></section>
+
+  <section class="card full"><h2>Pollutants now</h2><div id="pollutants" class="tiles"></div></section>
+</main>
+
+<footer>
+  <p>Air quality and weather: Open-Meteo (CAMS ENSEMBLE data). Ground stations: OpenAQ. Fires: NASA FIRMS (VIIRS).
+  Basemap: OpenFreeMap, OpenMapTiles, OpenStreetMap contributors.</p>
+  <p>AQI here is calculated from PM2.5 using U.S. EPA breakpoints. Values marked "Modelled estimate" come from an atmospheric
+  model, not a sensor. Health text is general guidance, not medical advice.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
