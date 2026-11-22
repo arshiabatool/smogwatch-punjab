@@ -1,9 +1,13 @@
 
+from forecast import run_forecast
+
 import json
 import math
 from pathlib import Path
 
 import pandas as pd
+
+from forecast import run_forecast
 
 from config import CITIES, TIMEZONE
 from openmeteo import get_model_table
@@ -304,7 +308,6 @@ def main():
 
     print("Archive records saved:", len(snap))
 
-
     # Timestamp for all output files
     stamp = pd.Timestamp.now(tz=TIMEZONE).strftime(
         "%Y-%m-%d %H:%M"
@@ -312,7 +315,26 @@ def main():
 
     print("\nSaving JSON files...")
 
-    # latest.json
+    # ------------------------------------------
+    # Phase 9: Generate PM2.5 forecast
+    # ------------------------------------------
+
+    fc = run_forecast(t, now, fires, measured)
+
+    if fc:
+        (OUT / "forecast.json").write_text(
+            json.dumps(fc, allow_nan=False),
+            encoding="utf-8"
+        )
+        print("Forecast generated and saved.")
+
+    else:
+        print("No forecast generated.")
+
+    # ------------------------------------------
+    # Save latest.json
+    # ------------------------------------------
+
     (OUT / "latest.json").write_text(
         json.dumps(
             {
@@ -324,13 +346,19 @@ def main():
         encoding="utf-8"
     )
 
-    # history.json
+    # ------------------------------------------
+    # Save history.json
+    # ------------------------------------------
+
     (OUT / "history.json").write_text(
         json.dumps(history, allow_nan=False),
         encoding="utf-8"
     )
 
-    # fires.json
+    # ------------------------------------------
+    # Save fires.json
+    # ------------------------------------------
+
     (OUT / "fires.json").write_text(
         json.dumps(
             {
