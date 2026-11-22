@@ -1,55 +1,127 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr" data-theme="dark">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>SmogWatch Punjab: live air quality and smog</title>
+  <meta name="description" content="Free live air quality, smog risk and 24-hour forecast for Punjab, Pakistan.">
+  <meta name="theme-color" content="#0e1620">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="top">
-  <div class="brand">SmogWatch <span>Punjab</span></div>
-  <select id="citySelect" aria-label="Choose a city"></select>
-  <div class="updated" id="updated">Loading...</div>
-</header>
+  <div id="map" aria-label="Map of air quality in Punjab"></div>
 
-<main class="grid">
-  <section class="card hero" id="hero"></section>
-
-  <section class="card mapcard">
-    <div class="maptools">
-      <label><input type="checkbox" id="tFires" checked> Fires</label>
-      <label><input type="checkbox" id="tWind" checked> Wind</label>
-      <span class="muted">Circle colour = AQI</span>
+  <div id="loader" class="loader" role="status">
+    <div class="loader-card glass">
+      <div class="spin" aria-hidden="true"></div>
+      <p id="loaderMsg" data-i18n="loading">Loading air quality data…</p>
+      <button id="retryBtn" class="btn" hidden data-i18n="retry">Try again</button>
     </div>
-    <div id="map"></div>
+  </div>
+
+  <header class="topbar glass">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+        <path d="M5 21a11 11 0 0 1 22 0" fill="none" stroke="#2fbf71" stroke-width="3.2" stroke-linecap="round" pathLength="100" stroke-dasharray="22 78"/>
+        <path d="M5 21a11 11 0 0 1 22 0" fill="none" stroke="#f4c20d" stroke-width="3.2" stroke-linecap="round" pathLength="100" stroke-dasharray="0 24 22 54"/>
+        <path d="M5 21a11 11 0 0 1 22 0" fill="none" stroke="#e5483f" stroke-width="3.2" stroke-linecap="round" pathLength="100" stroke-dasharray="0 48 22 30"/>
+        <path d="M6 26h20M9 29.5h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".55"/>
+      </svg>
+      <span class="brand-name" data-i18n="app_name">SmogWatch Punjab</span>
+    </div>
+    <select id="citySelect" class="select" data-i18n-aria="city_label" aria-label="Choose a city"></select>
+    <span id="stalePill" class="pill warn" hidden></span>
+    <div class="spacer"></div>
+    <button id="btnLang" class="iconbtn txt" type="button" data-i18n="lang_btn" lang="ur">اردو</button>
+    <button id="btnTheme" class="iconbtn" type="button" data-i18n-aria="theme_btn" aria-label="Switch light / dark theme">
+      <svg class="i-moon" viewBox="0 0 24 24" width="20" height="20"><path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a7 7 0 0 0 10.7 10.7z" fill="currentColor"/></svg>
+      <svg class="i-sun" viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.9 1.9M16.8 16.8l1.9 1.9M5.3 18.7l1.9-1.9M16.8 7.2l1.9-1.9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <button id="btnInfo" class="iconbtn" type="button" data-i18n-aria="info_btn" aria-label="About this site">
+      <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 10.8v6M12 7.2v.1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+  </header>
+
+  <nav id="layers" class="layers" data-i18n-aria="layers_label" aria-label="Map layers">
+    <button class="chip on" data-layer="cities" type="button"><i class="dot" style="--d:#2fbf71"></i><span data-i18n="ly_cities">Cities</span></button>
+    <button class="chip on" data-layer="sensors" type="button"><i class="dot" style="--d:#5aa9ff"></i><span><span data-i18n="ly_sensors">Sensors</span> <small id="sensorCount"></small></span></button>
+    <button class="chip on" data-layer="fires" type="button"><i class="dot" style="--d:#ff6a2b"></i><span data-i18n="ly_fires">Fires</span></button>
+    <button class="chip on" data-layer="wind" type="button"><i class="dot arrow" style="--d:#9fb0c0"></i><span data-i18n="ly_wind">Wind</span></button>
+    <button class="chip" data-layer="cone" type="button"><i class="dot wedge" style="--d:#ff7a1a"></i><span data-i18n="ly_cone">Smoke sector</span></button>
+  </nav>
+
+  <aside id="panel" class="panel glass">
+    <div id="grab" class="grab" role="button" tabindex="0" aria-label="Resize panel"><span></span></div>
+    <div class="phead">
+      <div class="ptitle">
+        <h1 id="cityName">Lahore</h1>
+        <div id="citySub" class="sub"></div>
+      </div>
+      <span id="srcBadge" class="badge"></span>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab on" role="tab" data-tab="now" type="button" data-i18n="tab_now">Now</button>
+      <button class="tab" role="tab" data-tab="smog" type="button" data-i18n="tab_smog">Smog</button>
+      <button class="tab" role="tab" data-tab="trends" type="button" data-i18n="tab_trends">Trends</button>
+      <button class="tab" role="tab" data-tab="rank" type="button" data-i18n="tab_rank">Ranking</button>
+    </div>
+    <div class="pbody" id="pbody">
+      <section class="pane on" data-pane="now" id="paneNow"></section>
+      <section class="pane" data-pane="smog" id="paneSmog"></section>
+      <section class="pane" data-pane="trends" id="paneTrends">
+        <h2 id="trTrendTitle"></h2>
+        <div id="trendChart" class="chart"></div>
+        <h2 id="trHeatTitle"></h2>
+        <div id="heatChart" class="chart tall"></div>
+      </section>
+      <section class="pane" data-pane="rank" id="paneRank"></section>
+    </div>
+  </aside>
+
+  <section id="timebar" class="timebar glass">
+    <button id="playBtn" class="playbtn" type="button" aria-label="Play">
+      <svg class="i-play" viewBox="0 0 24 24" width="20" height="20"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>
+      <svg class="i-pause" viewBox="0 0 24 24" width="20" height="20"><path d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z" fill="currentColor"/></svg>
+    </button>
+    <div class="tmid">
+      <div class="tline"><span id="tLabel" class="tlabel"></span><span id="tTag" class="tag"></span></div>
+      <input id="tSlider" type="range" min="0" max="100" value="100" step="1" aria-label="Time">
+      <div class="tends"><span id="tStart"></span><span id="tNow"></span><span id="tEnd"></span></div>
+    </div>
+    <button id="nowBtn" class="btn small" type="button" data-i18n="tl_back">Back to now</button>
   </section>
 
-  <section class="card weather" id="weather"></section>
+  <dialog id="about" class="about glass">
+    <form method="dialog" class="about-in">
+      <h2 data-i18n="about_title">About SmogWatch Punjab</h2>
+      <p data-i18n="about_intro"></p>
+      <h3 data-i18n="about_sources"></h3>
+      <ul>
+        <li data-i18n="about_src_1"></li><li data-i18n="about_src_2"></li>
+        <li data-i18n="about_src_3"></li><li data-i18n="about_src_4"></li>
+      </ul>
+      <h3 data-i18n="about_aqi_t"></h3><p data-i18n="about_aqi"></p>
+      <h3 data-i18n="about_mm_t"></h3><p data-i18n="about_mm"></p>
+      <h3 data-i18n="about_smog_t"></h3><p data-i18n="about_smog"></p>
+      <h3 data-i18n="about_fc_t"></h3><p data-i18n="about_fc"></p>
+      <p class="muted" data-i18n="about_health"></p>
+      <button class="btn" value="close" data-i18n="about_close">Close</button>
+    </form>
+  </dialog>
 
-  <section class="card ranking"><h2>City ranking (AQI)</h2><ol id="rankList"></ol></section>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <section class="card smog"><h2>Smog watch</h2><div id="smogBody"></div></section>
-
-  <section class="card advice" id="advice"></section>
-
-  <section class="card half"><h2>PM2.5: last 48 h and next 72 h</h2><div id="trend" class="chart"></div></section>
-
-  <section class="card half"><h2>Last 7 days, hour by hour (AQI)</h2><div id="heat" class="chart"></div></section>
-
-  <section class="card full"><h2>Pollutants now</h2><div id="pollutants" class="tiles"></div></section>
-</main>
-
-<footer>
-  <p>Air quality and weather: Open-Meteo (CAMS ENSEMBLE data). Ground stations: OpenAQ. Fires: NASA FIRMS (VIIRS).
-  Basemap: OpenFreeMap, OpenMapTiles, OpenStreetMap contributors.</p>
-  <p>AQI here is calculated from PM2.5 using U.S. EPA breakpoints. Values marked "Modelled estimate" come from an atmospheric
-  model, not a sensor. Health text is general guidance, not medical advice.</p>
-</footer>
-
-<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
-<script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+  <script src="lib.js"></script>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
