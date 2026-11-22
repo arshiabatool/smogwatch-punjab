@@ -1,0 +1,36 @@
+# Example hourly workflow. If you already have your own update.yml, do NOT replace it:
+# just add the "Build sensor layer" step (shown below) after your main pipeline step.
+name: Update data
+on:
+  schedule:
+    - cron: "10 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - run: pip install -r requirements.txt
+      - name: Main pipeline
+        run: python scripts/fetch_data.py
+        env:
+          OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+      - name: Build sensor layer
+        continue-on-error: true
+        run: python scripts/build_stations.py
+        env:
+          OPENAQ_API_KEY: ${{ secrets.OPENAQ_API_KEY }}
+      - name: Commit data
+        run: |
+          git config user.name "smogwatch-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add docs/data data_archive 2>/dev/null || git add docs/data
+          git diff --staged --quiet || (git commit -m "data update" && git pull --rebase && git push)
